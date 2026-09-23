@@ -18,9 +18,11 @@ services:
       PORT: "8098"
       MEDIA_ROOT: /data/gopro
       USERS_FILE: /config/users.json
-      AUTH_DISABLED: "${AUTH_DISABLED:-0}"
-      AUTH_PUBLIC_READ: "${AUTH_PUBLIC_READ:-1}"
-      AUTH_LOCAL: "${AUTH_LOCAL:-1}"
+      # Valores fijos (modo B): Portainer a veces no aplica ${VAR:-default} y deja AUTH_* vacío → pide Google y reinicia.
+      AUTH_DISABLED: "0"
+      AUTH_PUBLIC_READ: "1"
+      AUTH_LOCAL: "1"
+      SESSION_SECRET: "${SESSION_SECRET:-change-me-generate-with-openssl-rand-hex-32}"
       FFMPEG_VENC: "${FFMPEG_VENC:-libx264}"
       FFMPEG_PRESET: "${FFMPEG_PRESET:-veryfast}"
       PORTAL_BRAND: "${PORTAL_BRAND:-}"

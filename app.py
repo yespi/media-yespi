@@ -1578,8 +1578,13 @@ def main() -> None:
         print("[media] AUTH_LOCAL=1 — login usuario/clave (sin Google)", flush=True)
     elif AUTH_PUBLIC_READ:
         print("[media] AUTH_PUBLIC_READ=1 — lectura pública, admin con OAuth", flush=True)
-    elif not CLIENT_ID or not CLIENT_SECRET:
-        raise SystemExit("GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET required")
+    else:
+        print("[media] Google OAuth — solo usuarios en users.json", flush=True)
+    if not AUTH_DISABLED and not AUTH_LOCAL and (not CLIENT_ID or not CLIENT_SECRET):
+        raise SystemExit(
+            "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET required "
+            "(o pon AUTH_LOCAL=1 / AUTH_DISABLED=1 en el entorno del contenedor)"
+        )
     warm_thumbs_background()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"media-portal on http://{HOST}:{PORT} root={ROOT}", flush=True)
