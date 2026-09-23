@@ -24,13 +24,13 @@ Abre `http://IP-DEL-SERVIDOR:8098`.
 | Modo | Variables `.env` | Visitantes | Administrador |
 |------|------------------|------------|---------------|
 | **A — Abierto** | `AUTH_DISABLED=1` | Todo (incl. borrar) | — |
-| **B — Público + admin local** (recomendado en casa) | `AUTH_DISABLED=0`, `AUTH_PUBLIC_READ=1`, `AUTH_LOCAL=1` | Ver vídeos/fotos **sin login** | Usuario/clave en `config/users.json`, botón «Entrar (admin)», puede **borrar** |
+| **B — Público + admin local** (recomendado en casa) | `AUTH_DISABLED=0`, `AUTH_PUBLIC_READ=1`, `AUTH_LOCAL=1` en `state/.env` | Ver vídeos/fotos **sin login** | Usuario/clave en `state/config/users.json`, botón «Entrar (admin)», puede **borrar** |
 | **C — Google OAuth** | `AUTH_DISABLED=0`, `AUTH_PUBLIC_READ=0` o `1`, `AUTH_LOCAL=0` | Solo si `AUTH_PUBLIC_READ=1` | Login Google; correos en `users.json` |
 | **D — Google + lectura pública** | `AUTH_PUBLIC_READ=1`, `AUTH_LOCAL=0`, credenciales Google | Anónimos ven; borrar con Google + `admin: true` | |
 
 No hace falta Google en el **modo B**.
 
-### Modo B — ejemplo `config/users.json`
+### Modo B — ejemplo `state/config/users.json`
 
 ```json
 {
