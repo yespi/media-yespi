@@ -485,8 +485,12 @@ def ensure_photo_thumb(photo: Path, rel: str, wait: bool = False) -> Path | None
             return thumb
     except Exception:
         pass
-    if photo.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}:
-        return photo
+    # Por debajo de este tamaño el original ya pesa menos que el coste de escalarlo.
+    try:
+        if photo.stat().st_size <= 200 * 1024:
+            return photo
+    except OSError:
+        pass
     tmp = thumb.with_suffix(".tmp.jpg")
 
     def _job():
@@ -750,8 +754,11 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 .tab.active{background:var(--accent);color:#0c150f;border-color:var(--accent)}
 .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px}
 .folder-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.folder-chip{background:var(--surface);border:1px solid var(--border);padding:6px 12px;border-radius:999px;cursor:pointer;font-size:.85rem}
-.folder-chip:hover{border-color:var(--accent)}
+/* color explícito: si no, hereda el #0c150f de `button` y queda negro sobre fondo oscuro */
+.folder-chip{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:999px;cursor:pointer;font-size:.85rem}
+.folder-chip:hover{border-color:var(--accent);color:var(--accent)}
+#breadcrumb a{color:var(--accent);text-decoration:none}
+#breadcrumb a:hover{text-decoration:underline}
 #photoModal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.85)}
 #photoModal.open{display:flex}
 #photoModal img{max-width:min(1200px,100%);max-height:90vh;border-radius:8px}
@@ -840,7 +847,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   </div>
 </dialog>
 <script>
-const state={tab:'video',folder:'',folders:[],items:[],selected:new Set(),filter:'',sort:'date_desc'};
+const state={tab:'video',folder:'',folders:[],items:[],selected:new Set(),filter:'',sort:'date_desc',viewIndex:-1};
 const itemKey=v=>v.path||v.filename;
 let searchTimer=null;
 const session={email:null,username:null,name:null,admin:false,auth_disabled:false,public_read:false,auth_local:false};
@@ -872,6 +879,7 @@ async function load(){
   const u=`${base}?folder=${encodeURIComponent(state.folder)}&sort=${encodeURIComponent(state.sort)}&q=${encodeURIComponent(state.filter)}`;
   const r=await fetch(u); const j=await r.json();
   state.folders=j.folders||[]; state.items=j.items||[];
+  state.viewIndex=-1;
   render();
 }
 
@@ -917,7 +925,7 @@ function render(){
     const subDate=isPhoto?fmtDate(v.mtime?new Date(v.mtime*1000).toISOString():''):fmtDate(v.captured_at);
     card.innerHTML=`
       <div class="thumb-wrap">
-        <img class="thumb" data-file="${key}" src="/api/thumb?kind=${thumbKind}&file=${encodeURIComponent(key)}&t=1" alt="" loading="lazy">
+        <img class="thumb" data-file="${key}" data-kind="${thumbKind}" src="/api/thumb?kind=${thumbKind}&file=${encodeURIComponent(key)}&t=1" alt="" loading="lazy">
         <div class="play-badge">${isPhoto?'🖼':'▶'}</div>
         <label class="check-label" title="Seleccionar para borrar">
           <input class="check" type="checkbox" ${state.selected.has(key)?'checked':''} aria-label="Seleccionar">
@@ -936,11 +944,11 @@ function render(){
       card.classList.toggle('selected', cb.checked); syncBar();
     });
     if(!admin) lab.style.display='none';
-    card.querySelector('.thumb-wrap').addEventListener('click',()=>isPhoto?viewPhoto(v):play(v));
+    card.querySelector('.thumb-wrap').addEventListener('click',()=>openAt(list.indexOf(v)));
     g.appendChild(card);
   }
   syncBar();
-  if(!isPhoto) wireThumbs(g);
+  wireThumbs(g);
 }
 
 function viewPhoto(v){
@@ -948,7 +956,24 @@ function viewPhoto(v){
   $('photoFull').src='/api/photo?file='+encodeURIComponent(key);
   $('photoModal').classList.add('open');
 }
-$('photoModal').onclick=()=>$('photoModal').classList.remove('open');
+function closePhoto(){
+  $('photoModal').classList.remove('open');
+  $('photoFull').removeAttribute('src');
+  state.viewIndex=-1;
+}
+$('photoModal').onclick=closePhoto;
+
+// Abre por índice para poder recorrer la carpeta con ← y → sin salir del visor.
+function openAt(i){
+  const list=state.items;
+  if(!list.length) return;
+  state.viewIndex=(i+list.length)%list.length;
+  const v=list[state.viewIndex];
+  if(state.tab==='photo') viewPhoto(v); else play(v);
+}
+function stepView(d){
+  if(state.viewIndex>=0) openAt(state.viewIndex+d);
+}
 
 function syncBar(){
   const n=state.selected.size;
@@ -966,7 +991,7 @@ function wireThumbs(root){
       if(!pending || tries>=40) return;
       tries++;
       const f=img.dataset.file;
-      img.src=`/api/thumb?file=${encodeURIComponent(f)}&t=${Date.now()}`;
+      img.src=`/api/thumb?kind=${img.dataset.kind||'video'}&file=${encodeURIComponent(f)}&t=${Date.now()}`;
       setTimeout(tick, 1500 + tries*200);
     };
     img.addEventListener('load',()=>{
@@ -987,6 +1012,7 @@ function closePlayer(){
   $('playerModal').classList.remove('open');
   $('playerModal').setAttribute('aria-hidden','true');
   $('playerStatus').textContent='';
+  state.viewIndex=-1;
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
 }
 function play(v){
@@ -1008,7 +1034,17 @@ function play(v){
 }
 $('closePlayer').onclick=closePlayer;
 $('playerModal').addEventListener('click',e=>{if(e.target===$('playerModal')) closePlayer();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('playerModal').classList.contains('open')) closePlayer();});
+document.addEventListener('keydown',e=>{
+  const photoOpen=$('photoModal').classList.contains('open');
+  const playerOpen=$('playerModal').classList.contains('open');
+  if(!photoOpen&&!playerOpen) return;
+  if(e.key==='Escape'){e.preventDefault(); photoOpen?closePhoto():closePlayer(); return;}
+  if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight') return;
+  e.preventDefault();
+  // Las flechas cambian de elemento, así que el salto dentro del vídeo pasa a Shift+flecha.
+  if(playerOpen&&e.shiftKey){$('player').currentTime+=(e.key==='ArrowRight'?10:-10); return;}
+  stepView(e.key==='ArrowRight'?1:-1);
+});
 $('btnFs').onclick=()=>{
   const shell=$('playerShell');
   if(!document.fullscreenElement) shell.requestFullscreen?.().catch(()=>$('player').requestFullscreen?.());
