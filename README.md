@@ -100,6 +100,21 @@ docker compose up -d
 
 Conserva tu `.env` y `config/users.json` (no están en git).
 
+## Portainer / «GOOGLE_CLIENT_ID required» / reinicio en bucle
+
+El contenedor necesita **modo B** en las variables de entorno:
+
+| Variable | Valor |
+|----------|--------|
+| `AUTH_DISABLED` | `0` |
+| `AUTH_PUBLIC_READ` | `1` |
+| `AUTH_LOCAL` | `1` |
+| `SESSION_SECRET` | cadena larga (`openssl rand -hex 32`) |
+
+En **Portainer → Stack → Environment**, añádelas explícitamente (no confíes solo en sustitución `${...}` del YAML). Sin `AUTH_LOCAL=1` el arranque exige Google y el contenedor entra en **Restarting**.
+
+`hash_password.py` está en la **raíz del repo** (junto a `app.py`), no dentro de `config/`.
+
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE).
