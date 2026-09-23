@@ -55,14 +55,25 @@ CALLBACK_URL = os.environ.get(
 COOKIE = "media_session"
 COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN", "").strip()
 _COOKIE_SECURE_RAW = os.environ.get("COOKIE_SECURE", "auto").strip().lower()
-AUTH_DISABLED = os.environ.get("AUTH_DISABLED", "").strip().lower() in ("1", "true", "yes", "on")
-AUTH_PUBLIC_READ = os.environ.get("AUTH_PUBLIC_READ", "").strip().lower() in (
-    "1",
-    "true",
-    "yes",
-    "on",
-)
-AUTH_LOCAL = os.environ.get("AUTH_LOCAL", "").strip().lower() in ("1", "true", "yes", "on")
+def _env_on(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+_has_google_oauth = bool(CLIENT_ID.strip() and CLIENT_SECRET.strip())
+_auth_disabled_raw = os.environ.get("AUTH_DISABLED", "").strip()
+_auth_local_raw = os.environ.get("AUTH_LOCAL", "").strip()
+_auth_public_raw = os.environ.get("AUTH_PUBLIC_READ", "").strip()
+
+AUTH_DISABLED = _env_on("AUTH_DISABLED") if _auth_disabled_raw else False
+if _auth_local_raw:
+    AUTH_LOCAL = _env_on("AUTH_LOCAL")
+else:
+    # Repo público / Docker sin Google: modo B por defecto (no hace falta AUTH_* en Portainer).
+    AUTH_LOCAL = not _has_google_oauth
+if _auth_public_raw:
+    AUTH_PUBLIC_READ = _env_on("AUTH_PUBLIC_READ")
+else:
+    AUTH_PUBLIC_READ = AUTH_LOCAL if not _has_google_oauth else False
 _PUBLIC_GET_PATHS = frozenset(
     {
         "/",
