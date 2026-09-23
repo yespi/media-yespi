@@ -10,3 +10,5 @@ data/gopro/thumbs/
 data/gopro/thumbs_photos/
 data/gopro/proxies/
 *.log
+__pycache__/
+*.pyc
