@@ -1,0 +1,2 @@
+Opcional: guarda aquí tu logo como logo.png (o logo.jpg y define PORTAL_LOGO_FILE en .env).
+Si no hay logo, se muestra el texto PORTAL_BRAND del .env.

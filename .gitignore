@@ -1,0 +1,12 @@
+.env
+config/users.json
+config/logo.png
+config/logo.jpg
+data/gopro/videos/*
+!data/gopro/videos/.gitkeep
+data/gopro/photos/*
+!data/gopro/photos/.gitkeep
+data/gopro/thumbs/
+data/gopro/thumbs_photos/
+data/gopro/proxies/
+*.log

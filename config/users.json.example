@@ -1,0 +1,10 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "name": "Administrador",
+      "admin": true,
+      "password_hash": "pbkdf2_sha256$359934902707eb5c2c2291ff76463677$c02dff985be6a9f526d3168ee77fc7cc23473230e97895fdc58fc20c4f2c22e7"
+    }
+  ]
+}
