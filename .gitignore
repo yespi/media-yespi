@@ -2,6 +2,14 @@
 config/users.json
 config/logo.png
 config/logo.jpg
+# Persistencia real (git pull no la toca)
+state/.env
+state/config/*
+!state/config/.gitkeep
+state/data/gopro/**/*
+!state/data/gopro/videos/.gitkeep
+!state/data/gopro/photos/.gitkeep
+# Legacy en raíz del repo (migrar a state/)
 data/gopro/videos/*
 !data/gopro/videos/.gitkeep
 data/gopro/photos/*

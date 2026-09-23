@@ -1,5 +1,5 @@
-# Ruta en la Pi donde descomprimiste el ZIP (carpeta que contiene app.py y Dockerfile).
-# En Portainer: Stack → Environment variables → MEDIA_PORTAL_ROOT=/ruta/completa
+# MEDIA_PORTAL_ROOT = carpeta del código (build). STATE_DIR = config + vídeos (persistente, fuera de git pull).
+# Portainer: MEDIA_PORTAL_ROOT=/home/odt/media-yespi  STATE_DIR=/home/odt/media-portal-state
 name: media-portal
 
 services:
@@ -11,8 +11,8 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-8098}:8098"
-    # No usamos env_file: en Portainer suele faltar .env y el stack no crea ningún contenedor.
-    # Crea .env en la carpeta del proyecto solo si quieres cambiar PORT / AUTH_* (sustitución ${...}).
+    env_file:
+      - ${STATE_DIR:-./state}/.env
     environment:
       HOST: "0.0.0.0"
       PORT: "8098"
@@ -22,12 +22,11 @@ services:
       AUTH_DISABLED: "0"
       AUTH_PUBLIC_READ: "1"
       AUTH_LOCAL: "1"
-      SESSION_SECRET: "${SESSION_SECRET:-change-me-generate-with-openssl-rand-hex-32}"
       FFMPEG_VENC: "${FFMPEG_VENC:-libx264}"
       FFMPEG_PRESET: "${FFMPEG_PRESET:-veryfast}"
       PORTAL_BRAND: "${PORTAL_BRAND:-}"
       PORTAL_LOGO_URL: "${PORTAL_LOGO_URL:-}"
       PORTAL_LOGO_FILE: "${PORTAL_LOGO_FILE:-/config/logo.png}"
     volumes:
-      - ${MEDIA_PORTAL_ROOT:-.}/data/gopro:/data/gopro
-      - ${MEDIA_PORTAL_ROOT:-.}/config:/config:ro
+      - ${STATE_DIR:-./state}/data/gopro:/data/gopro
+      - ${STATE_DIR:-./state}/config:/config:ro

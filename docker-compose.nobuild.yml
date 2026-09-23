@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-8098}:8098"
+    env_file:
+      - ${STATE_DIR:-./state}/.env
     environment:
       HOST: "0.0.0.0"
       PORT: "8098"
@@ -17,7 +19,6 @@ services:
       AUTH_DISABLED: "0"
       AUTH_PUBLIC_READ: "1"
       AUTH_LOCAL: "1"
-      SESSION_SECRET: "${SESSION_SECRET:-change-me-generate-with-openssl-rand-hex-32}"
       FFMPEG_VENC: "${FFMPEG_VENC:-libx264}"
       FFMPEG_PRESET: "${FFMPEG_PRESET:-veryfast}"
       PORTAL_BRAND: "${PORTAL_BRAND:-}"
@@ -26,8 +27,8 @@ services:
     volumes:
       - ${MEDIA_PORTAL_ROOT:-.}/app.py:/app/app.py:ro
       - ${MEDIA_PORTAL_ROOT:-.}/entrypoint-nobuild.sh:/entrypoint.sh:ro
-      - ${MEDIA_PORTAL_ROOT:-.}/data/gopro:/data/gopro
-      - ${MEDIA_PORTAL_ROOT:-.}/config:/config:ro
+      - ${STATE_DIR:-./state}/data/gopro:/data/gopro
+      - ${STATE_DIR:-./state}/config:/config:ro
       - media-portal-ffmpeg-state:/var/lib/media-portal
     entrypoint: ["/bin/bash", "/entrypoint.sh"]
 

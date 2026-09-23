@@ -9,13 +9,13 @@ Sin base de datos: todo son ficheros en disco.
 ```bash
 git clone https://github.com/yespi/media-yespi.git
 cd media-yespi
-cp .env.example .env
-cp config/users.json.example config/users.json
-# Edita .env y config/users.json según el modo de auth (abajo)
-mkdir -p data/gopro/videos data/gopro/photos
+bash scripts/init-state.sh
+# Edita solo una vez: state/.env y state/config/users.json (hash_password.py)
 docker compose build
 docker compose up -d
 ```
+
+**Actualizar** sin perder config ni vídeos: `bash scripts/upgrade.sh` (hace `git pull` + rebuild; **no** toca `state/`).
 
 Abre `http://IP-DEL-SERVIDOR:8098`.
 
@@ -98,7 +98,16 @@ docker compose build
 docker compose up -d
 ```
 
-Conserva tu `.env` y `config/users.json` (no están en git).
+Config y biblioteca en **`state/`** (gitignored). El código del repo se puede actualizar con `git pull`; `state/.env`, `state/config/users.json` y `state/data/` quedan intactos.
+
+Migración desde `.env` / `config/` en la raíz del clon:
+
+```bash
+bash scripts/init-state.sh
+[ -f .env ] && mv -n .env state/.env
+[ -f config/users.json ] && mv -n config/users.json state/config/users.json
+[ -d data/gopro ] && cp -an data/gopro/. state/data/gopro/ 2>/dev/null || true
+```
 
 ## Portainer / «GOOGLE_CLIENT_ID required» / reinicio en bucle
 
