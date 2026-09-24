@@ -313,6 +313,51 @@ def load_library() -> dict[str, dict]:
     return by
 
 
+def resolve_video_media_id(stem: str, filename: str, lib: dict | None = None) -> str | None:
+    """Resolve GoPro Cloud API media id from an on-disk video name."""
+    lib = lib if lib is not None else load_library()
+    fn = filename or f"{stem}.MP4"
+    m = re.search(r"_([0-9a-f]{8})$", stem, re.I)
+    if m:
+        pref = m.group(1).lower()
+        meta = lib.get(pref) or {}
+        rid = str(meta.get("id") or pref)
+        return rid or None
+    meta = lib.get(fn) or lib.get(stem) or {}
+    if meta.get("id"):
+        return str(meta["id"])
+    m2 = re.search(r"_([A-Za-z0-9]{8})$", stem)
+    if m2:
+        suf = m2.group(1)
+        meta = lib.get(suf) or lib.get(suf.lower()) or {}
+        if meta.get("id"):
+            return str(meta["id"])
+        base = stem[: -(len(suf) + 1)]
+        for cand in (f"{base}.MP4", f"{base}.mp4", base):
+            meta = lib.get(cand) or {}
+            if meta.get("id"):
+                return str(meta["id"])
+    return None
+
+
+def _deleted_state_keys(media_id: str | None, filename: str) -> list[str]:
+    keys: list[str] = []
+    if media_id:
+        keys.append(media_id)
+        if len(media_id) >= 8:
+            keys.append(media_id[:8])
+    if filename:
+        keys.append(filename)
+        keys.append(Path(filename).stem)
+    seen: set[str] = set()
+    out: list[str] = []
+    for k in keys:
+        if k and k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out
+
+
 def _safe_rel_path(base: Path, rel: str) -> Path | None:
     rel = (rel or "").replace("\\", "/").strip("/")
     if rel and (".." in rel.split("/") or rel.startswith(".")):
@@ -638,10 +683,14 @@ def mark_download_deleted(media_id: str | None, filename: str) -> None:
             st.update(json.loads(DOWNLOAD_STATE.read_text()))
         st.setdefault("deleted", {})
         st.setdefault("done", {})
-        key = media_id or filename
-        st["deleted"][key] = {"at": time.time(), "filename": filename, "reason": "portal_delete"}
-        if media_id:
-            st["done"].pop(media_id, None)
+        resolved = media_id or resolve_video_media_id(Path(filename).stem, filename)
+        entry: dict = {"at": time.time(), "filename": filename, "reason": "portal_delete"}
+        if resolved:
+            entry["media_id"] = resolved
+        for key in _deleted_state_keys(resolved, filename):
+            st["deleted"][key] = dict(entry)
+        if resolved:
+            st["done"].pop(resolved, None)
         # also drop done entries pointing at this file
         for mid, info in list(st["done"].items()):
             if (info or {}).get("filename") == filename or str((info or {}).get("path") or "").endswith(filename):
@@ -1586,10 +1635,7 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     mid = None
                     if kind == "video":
-                        m = re.search(r"_([0-9a-f]{8})$", p.stem, re.I)
-                        if m:
-                            meta = load_library().get(m.group(1).lower()) or {}
-                            mid = meta.get("id") or m.group(1).lower()
+                        mid = resolve_video_media_id(p.stem, p.name)
                     p.unlink()
                     tkey = _thumb_key(rel)
                     if kind == "photo":
